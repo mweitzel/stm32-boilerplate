@@ -1,0 +1,2 @@
+logfile ./wat.log
+logfile flush 0

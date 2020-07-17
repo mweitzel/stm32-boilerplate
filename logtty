@@ -1,0 +1,53 @@
+#!/usr/bin/env python3
+
+
+import sys
+import subprocess
+import time
+import os.path
+
+def pause_file_exists():
+    return os.path.isfile(".pause")
+
+class ProcHolder:
+    def __init__(self, tty_path):
+        self.tty_path = tty_path
+        proc = subprocess.Popen(["touch", "wat.log"])
+        proc.wait()
+        proc = subprocess.Popen(["tail", "-n", "1", "-f", "wat.log"])
+        self.start()
+
+    def is_running(self):
+        proc = subprocess.Popen(["screen", "-list"], stdout=subprocess.PIPE)
+        proc.wait()
+        output = proc.stdout.read()
+        return ".ftdi" in str(output)
+
+    def kill(self):
+        proc = subprocess.Popen(["screen", "-XS", "ftdi", "quit"], stdout=subprocess.PIPE)
+        proc.wait()
+        proc = subprocess.Popen(["screen", "-wipe"], stdout=subprocess.PIPE)
+        proc.wait()
+        print("::: pause  :::")
+
+    def start(self):
+        proc = subprocess.Popen(["screen", "-S", "ftdi", "-c", ".screenrc", "-L", "-d", "-m", self.tty_path, "9600"], stdout=subprocess.PIPE)
+        proc.wait()
+        print("::: resume :::")
+
+
+def main_loop():
+    tty_path = sys.argv[1]
+    proc = ProcHolder(tty_path)
+    while True:
+        if pause_file_exists():
+            if proc.is_running():
+                proc.kill()
+        else:
+            if not proc.is_running():
+                proc.start()
+        time.sleep(0.1)
+
+
+if __name__ == "__main__":
+    main_loop()
